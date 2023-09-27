@@ -7,21 +7,14 @@ import android.graphics.*
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.RippleDrawable
 import android.os.Build
+import android.util.TypedValue
 import android.view.View
+import androidx.annotation.AttrRes
 import androidx.annotation.ColorInt
 import androidx.annotation.ColorRes
 import androidx.annotation.Size
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.withTranslation
-import ir.afraapps.kotlin.basic.R
-import ir.afraapps.kotlin.basic.core.allIsSameValue
-import ir.afraapps.kotlin.basic.core.color
-import ir.afraapps.kotlin.basic.core.getColorStateListCompat
-import ir.afraapps.kotlin.basic.core.isLocaleRTL
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.jetbrains.anko.colorAttr
 import java.lang.Float.max
 import kotlin.math.min
 
@@ -30,7 +23,6 @@ import kotlin.math.min
  *
  * Created by Ali Jabbari on 5/22/20.
  */
-
 class RoundDrawable(val context: Context) : Drawable() {
 
     private val paint: Paint
@@ -65,7 +57,7 @@ class RoundDrawable(val context: Context) : Drawable() {
     @ColorRes
     var strokeColorResource: Int = 0
         set(value) {
-            strokeColor = context.color(value)
+            strokeColor = ContextCompat.getColor(context, value)
         }
 
     var strokeColorStateList: ColorStateList? = null
@@ -73,7 +65,7 @@ class RoundDrawable(val context: Context) : Drawable() {
     @ColorRes
     var strokeColorStateListResource: Int = 0
         set(value) {
-            strokeColorStateList = context.getColorStateListCompat(value)
+            strokeColorStateList = ContextCompat.getColorStateList(context, value)
         }
 
 
@@ -83,7 +75,7 @@ class RoundDrawable(val context: Context) : Drawable() {
     @ColorRes
     var fillColorResource: Int = 0
         set(value) {
-            fillColor = context.color(value)
+            fillColor = ContextCompat.getColor(context, value)
             fillColorStateList = null
         }
 
@@ -92,7 +84,7 @@ class RoundDrawable(val context: Context) : Drawable() {
     @ColorRes
     var fillColorStateListResource: Int = 0
         set(value) {
-            fillColorStateList = context.getColorStateListCompat(value)
+            fillColorStateList = ContextCompat.getColorStateList(context, value)
         }
 
 
@@ -127,12 +119,12 @@ class RoundDrawable(val context: Context) : Drawable() {
         radiuses = floatArrayOf(radius, 0f, 0f, radius)
     }
 
-    fun startLocaleCorner(radius: Float) {
-        if (isLocaleRTL()) rightCorner(radius) else leftCorner(radius)
+    fun startCorner(radius: Float, isRtl: Boolean) {
+        if (isRtl) rightCorner(radius) else leftCorner(radius)
     }
 
-    fun endLocaleCorner(radius: Float) {
-        if (isLocaleRTL()) leftCorner(radius) else rightCorner(radius)
+    fun endCorner(radius: Float, isRtl: Boolean) {
+        if (isRtl) leftCorner(radius) else rightCorner(radius)
     }
 
     var isCircle: Boolean = false
@@ -155,17 +147,6 @@ class RoundDrawable(val context: Context) : Drawable() {
         paddingBottom = padding
     }
 
-    private val bitmapMatrix = Matrix()
-
-    var bitmap: Bitmap? = null
-        set(value) {
-            field = value
-            val b = bounds
-            if (b.isEmpty.not()) {
-                prepareBoundAndPath(b)
-            }
-        }
-
     private fun mutateRoundConstantState(): RoundDrawableState {
         return RoundDrawableState(context, drawableState)
     }
@@ -179,6 +160,7 @@ class RoundDrawable(val context: Context) : Drawable() {
             it.fillColor = fillColor
             it.fillColorStateList = fillColorStateList
             it.radiuses = radiuses
+            it.shadowType = shadowType
             it.shadowColor = shadowColor
             it.shadowSize = shadowSize
             it.shadowX = shadowX
@@ -200,47 +182,31 @@ class RoundDrawable(val context: Context) : Drawable() {
     }
 
     override fun draw(canvas: Canvas) {
-
         //----------------------------------------------------------
+        paint.strokeWidth = strokeWidth
         paint.style = if (strokeWidth > 0f) Paint.Style.FILL_AND_STROKE else Paint.Style.FILL
-        val nPath = path
 
-        if (shadowSize > 0f && nPath.isEmpty.not()) {
+        if (shadowSize > 0f) {
             paint.color = shadowColor
-            if (shadowType == ShadowType.BLUR) {
+            val hasBlurFilter = shadowType == ShadowType.BLUR
+            if (hasBlurFilter) {
                 paint.maskFilter = BlurMaskFilter(shadowSize, BlurMaskFilter.Blur.NORMAL)
             }
-            canvas.withTranslation(shadowX, shadowY) {
-                if (bitmap != null) {
-                    canvas.drawPath(path, paint)
-                } else {
-                    drawRoundDrawable(canvas)
-                }
+            canvas.withTranslation(shadowX, shadowY) { drawRoundDrawable(canvas) }
+            if (hasBlurFilter) {
+                paint.maskFilter = null
             }
-            paint.maskFilter = null
         }
 
         //----------------------------------------------------------
-        if (bitmap != null) {
-            if (nPath.isEmpty.not()) {
-                canvas.drawBitmap(bitmap!!, bitmapMatrix, null)
-            }
-            return
-        }
-
-        //----------------------------------------------------------
+        paint.style = Paint.Style.FILL
         paint.color = fillColorStateList?.getColorForState(state, fillColor) ?: fillColor
         drawRoundDrawable(canvas)
 
         //----------------------------------------------------------
         if (strokeWidth <= 0f) return
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = strokeWidth
-
-        strokeColorStateList?.let {
-            paint.color = it.getColorForState(state, strokeColor)
-        } ?: let { paint.color = strokeColor }
-
+        paint.color = strokeColorStateList?.getColorForState(state, strokeColor) ?: strokeColor
         drawRoundDrawable(canvas)
     }
 
@@ -279,9 +245,6 @@ class RoundDrawable(val context: Context) : Drawable() {
         paint.colorFilter = colorFilter
     }
 
-    /*var xfermode
-        get() = paint.xfermode
-        set(value) = let { paint.xfermode = value }*/
 
     private fun hasPadding(): Boolean {
         return paddingLeft > 0 || paddingTop > 0 || paddingRight > 0 || paddingBottom > 0
@@ -291,12 +254,32 @@ class RoundDrawable(val context: Context) : Drawable() {
     override fun getPadding(padding: Rect): Boolean {
         var consumed = false
         padding.set(0, 0, 0, 0)
-        if (shadowSize > 0) {
+        /*if (strokeWidth > 0f) {
             consumed = true
-            padding.left += Math.max(shadowSize - shadowX, 0f).toInt()
-            padding.right += (shadowSize + shadowX).toInt()
-            padding.top += Math.max(shadowSize - shadowY, 0f).toInt()
-            padding.bottom += (shadowSize + shadowY).toInt()
+            val strokePadding = strokeWidth.toInt()
+            padding.left += strokePadding
+            padding.top += strokePadding
+            padding.right += strokePadding
+            padding.bottom += strokePadding
+        }*/
+        if (shadowSize > 0f) {
+            consumed = true
+            when (shadowType) {
+                ShadowType.BLUR -> {
+                    padding.left += Math.max(shadowSize - shadowX, 0f).toInt()
+                    padding.right += (shadowSize + shadowX).toInt()
+                    padding.top += Math.max(shadowSize - shadowY, 0f).toInt()
+                    padding.bottom += (shadowSize + shadowY).toInt()
+                }
+
+                ShadowType.SOLID -> {
+                    padding.left += Math.max(shadowX, 0f).toInt()
+                    padding.right += Math.max(shadowX, 0f).toInt()
+                    padding.top += Math.max(shadowY, 0f).toInt()
+                    padding.bottom += Math.max(shadowY, 0f).toInt()
+                }
+            }
+
         }
         if (hasPadding()) {
             consumed = true
@@ -342,10 +325,21 @@ class RoundDrawable(val context: Context) : Drawable() {
             boundRound.bottom -= borderHalf
         }
         if (shadowSize > 0f) {
-            boundRound.left += max(shadowSize - shadowX, 0f)
-            boundRound.top += max(shadowSize - shadowY, 0f)
-            boundRound.right -= min(shadowSize + shadowX, bounds.width().toFloat())
-            boundRound.bottom -= min(shadowSize + shadowY, bounds.height().toFloat())
+            when (shadowType) {
+                ShadowType.BLUR -> {
+                    boundRound.left = max(boundRound.left + shadowSize - shadowX, 0f)
+                    boundRound.top = max(boundRound.top + shadowSize - shadowY, 0f)
+                    boundRound.right = min(boundRound.right - shadowSize + shadowX, bounds.width().toFloat())
+                    boundRound.bottom = min(boundRound.bottom - shadowSize + shadowY, bounds.height().toFloat())
+                }
+
+                ShadowType.SOLID -> {
+                    boundRound.left = max(boundRound.left + shadowX, 0f)
+                    boundRound.top = max(boundRound.top + shadowY, 0f)
+                    boundRound.right = min(boundRound.right - shadowX, bounds.width().toFloat())
+                    boundRound.bottom = min(boundRound.bottom - shadowY, bounds.height().toFloat())
+                }
+            }
         }
         generatePath(boundRound)
     }
@@ -353,29 +347,7 @@ class RoundDrawable(val context: Context) : Drawable() {
 
     private fun generatePath(bounds: RectF) {
         path.reset()
-        bitmapMatrix.reset()
-        if (bitmap == null) {
-            path.addRoundRect(bounds, getCorrectRadius(), Path.Direction.CW)
-        } else {
-            val b = bitmap!!
-            val nPath = Path()
-            GlobalScope.launch(Dispatchers.IO) {
-                bitmapMatrix.setScale(bounds.width() / b.width.toFloat(), bounds.height() / b.height.toFloat())
-                bitmapMatrix.postTranslate(bounds.left, bounds.top)
-                for (y in 0 until b.height) {
-                    for (x in 0 until b.width) {
-                        val pixel = b.getPixel(x, y)
-                        if (pixel == 0) continue
-                        nPath.addRect(x.toFloat(), y.toFloat(), x + 1f, y + 1f, Path.Direction.CCW)
-                    }
-                }
-                nPath.transform(bitmapMatrix)
-                path.set(nPath)
-                withContext(Dispatchers.Main) {
-                    invalidateSelf()
-                }
-            }
-        }
+        path.addRoundRect(bounds, getCorrectRadius(), Path.Direction.CW)
     }
 
     private fun getCorrectRadius(): FloatArray {
@@ -396,7 +368,7 @@ class RoundDrawable(val context: Context) : Drawable() {
                 (boundRound.bottom + borderHalf).toInt()
             )
 
-        } else if (bitmap != null || radiuses.allIsSameValue().not()) {
+        } else if (radiuses.allIsSameValue().not()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 outline.setPath(path)
             } else {
@@ -442,6 +414,7 @@ class RoundDrawable(val context: Context) : Drawable() {
 
         var isCircle: Boolean = false
 
+        var shadowType: Int = ShadowType.BLUR
         var shadowColor: Int = 0x30000000
         var shadowSize = 0f
         var shadowX = 2f
@@ -468,6 +441,7 @@ class RoundDrawable(val context: Context) : Drawable() {
                 it.isCircle = isCircle
                 it.radiuses = radiuses
                 it.shadowSize = shadowSize
+                it.shadowType = shadowType
                 it.shadowColor = shadowColor
                 it.shadowX = shadowX
                 it.shadowY = shadowY
@@ -513,7 +487,7 @@ fun Context.rippleDrawable(isUnbounded: Boolean = false, highlight: ColorStateLi
             intArrayOf()
         ),
         intArrayOf(
-            colorAttr(R.attr.colorControlHighlight),
+            theme.color(androidx.appcompat.R.attr.colorControlHighlight),
             Color.TRANSPARENT
         )
     )
@@ -528,7 +502,7 @@ fun Context.rippleCircleDrawable(isUnbounded: Boolean = false, highlight: ColorS
             intArrayOf()
         ),
         intArrayOf(
-            colorAttr(R.attr.colorControlHighlight),
+            theme.color(androidx.appcompat.R.attr.colorControlHighlight),
             Color.TRANSPARENT
         )
     )
@@ -549,4 +523,21 @@ fun View.rippleDrawable(isUnbounded: Boolean = false, highlight: ColorStateList?
 
 fun View.rippleCircleDrawable(isUnbounded: Boolean = false, highlight: ColorStateList? = null, init: RoundDrawable.() -> Unit = {}): Drawable {
     return context.rippleCircleDrawable(isUnbounded, highlight, init)
+}
+
+private fun FloatArray.allIsSameValue(): Boolean {
+    val firstValue = get(0)
+    return all { it == firstValue }
+}
+
+@ColorInt
+private fun Resources.Theme.color(@AttrRes attribute: Int): Int {
+    val attr = TypedValue()
+    if (!resolveAttribute(attribute, attr, true)) {
+        throw IllegalArgumentException("Failed to resolve attribute: $attribute")
+    }
+    if (attr.type < TypedValue.TYPE_FIRST_COLOR_INT || attr.type > TypedValue.TYPE_LAST_COLOR_INT) {
+        throw IllegalArgumentException("Attribute value type is not color: $attribute")
+    }
+    return attr.data
 }
