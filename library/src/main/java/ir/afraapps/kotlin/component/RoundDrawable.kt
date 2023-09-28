@@ -1,4 +1,4 @@
-package ir.afraapps.kotlin.basic.component
+package ir.afraapps.kotlin.component
 
 import android.content.Context
 import android.content.res.ColorStateList
@@ -15,7 +15,6 @@ import androidx.annotation.ColorRes
 import androidx.annotation.Size
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.withTranslation
-import java.lang.Float.max
 import kotlin.math.min
 
 /**
@@ -132,8 +131,8 @@ class RoundDrawable(val context: Context) : Drawable() {
     var shadowType: Int = ShadowType.BLUR
     var shadowColor: Int = 0x30000000
     var shadowSize = 0f
-    var shadowX = 2f
-    var shadowY = 5f
+    var shadowX = 0f
+    var shadowY = 0f
 
     var paddingLeft = 0
     var paddingTop = 0
@@ -327,20 +326,26 @@ class RoundDrawable(val context: Context) : Drawable() {
         if (shadowSize > 0f) {
             when (shadowType) {
                 ShadowType.BLUR -> {
-                    boundRound.left = max(boundRound.left + shadowSize - shadowX, 0f)
-                    boundRound.top = max(boundRound.top + shadowSize - shadowY, 0f)
-                    boundRound.right = min(boundRound.right - shadowSize + shadowX, bounds.width().toFloat())
-                    boundRound.bottom = min(boundRound.bottom - shadowSize + shadowY, bounds.height().toFloat())
+                    boundRound.left += shadowSize - shadowX
+                    boundRound.top += shadowSize - shadowY
+                    boundRound.right -= shadowSize + shadowX
+                    boundRound.bottom -= shadowSize + shadowY
                 }
 
                 ShadowType.SOLID -> {
-                    boundRound.left = max(boundRound.left + shadowX, 0f)
-                    boundRound.top = max(boundRound.top + shadowY, 0f)
-                    boundRound.right = min(boundRound.right - shadowX, bounds.width().toFloat())
-                    boundRound.bottom = min(boundRound.bottom - shadowY, bounds.height().toFloat())
+                    boundRound.left += shadowX
+                    boundRound.top += shadowY
+                    boundRound.right -= shadowX
+                    boundRound.bottom -= shadowY
                 }
             }
         }
+        val width = bounds.width().toFloat()
+        val height = bounds.height().toFloat()
+        if (boundRound.left < 0f) boundRound.left = 0f
+        if (boundRound.top < 0f) boundRound.top = 0f
+        if (boundRound.right > width) boundRound.right = width
+        if (boundRound.bottom > height) boundRound.bottom = height
         generatePath(boundRound)
     }
 

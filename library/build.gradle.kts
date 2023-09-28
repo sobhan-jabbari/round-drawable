@@ -43,7 +43,7 @@ android {
     lint {
         abortOnError = false
     }
-    namespace = "ir.afraapps.kotlin.basic.component"
+    namespace = "ir.afraapps.kotlin.component"
 
 }
 
