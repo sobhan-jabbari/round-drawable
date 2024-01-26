@@ -8,8 +8,8 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.0.2")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.22")
+        classpath("com.android.tools.build:gradle:8.2.2")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.21")
     }
 }
 
@@ -23,11 +23,11 @@ allprojects {
 
 
 task("clean", Delete::class) {
-    delete(rootProject.buildDir)
+    delete(rootProject.layout.buildDirectory)
 }
 
-val appVersionCode by extra(1003)
-val appVersionName by extra("1.0.3")
+val appVersionCode by extra(1004)
+val appVersionName by extra("1.0.4")
 
 
 task("backup", Zip::class) {

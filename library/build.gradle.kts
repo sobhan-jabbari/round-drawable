@@ -12,7 +12,7 @@ version = appVersionName
 
 
 android {
-    compileSdk = 33
+    compileSdk = 34
 
     defaultConfig {
         minSdk = 21
@@ -88,12 +88,12 @@ publishing {
         }
     }
 
-    repositories {
+    /*repositories {
         maven {
             name = "afraapps"
             url = uri("${project.layout.buildDirectory}/afraapps")
         }
-    }
+    }*/
 
 }
 
@@ -103,7 +103,7 @@ dependencies {
 
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.appcompat:appcompat-resources:1.6.1")
-    implementation("com.google.android.material:material:1.9.0")
+    implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.core:core-ktx:1.12.0")
 }
 

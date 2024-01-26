@@ -100,6 +100,10 @@ class RoundDrawable(val context: Context) : Drawable() {
      */
     @Size(4)
     var radiuses: FloatArray = floatArrayOf(radius, radius, radius, radius)
+        set(value) {
+            field = value
+            generatePath(boundRound)
+        }
 
 
     fun topCorner(radius: Float) {
@@ -352,7 +356,9 @@ class RoundDrawable(val context: Context) : Drawable() {
 
     private fun generatePath(bounds: RectF) {
         path.reset()
-        path.addRoundRect(bounds, getCorrectRadius(), Path.Direction.CW)
+        if (bounds.isEmpty.not()) {
+            path.addRoundRect(bounds, getCorrectRadius(), Path.Direction.CW)
+        }
     }
 
     private fun getCorrectRadius(): FloatArray {
